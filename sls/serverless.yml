@@ -1,0 +1,72 @@
+service: snf-recommender-demo
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: python3.7
+  region: ${file(./config.${self:provider.stage}.yml):region}
+  stage: ${opt:stage, 'dev'}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "sagemaker:CreateTrainingJob"
+        - "sagemaker:CreateEndpointConfig"
+        - "sagemaker:CreateEndpoint"
+        - "sagemaker:CreateModel"
+        - "sagemaker:InvokeEndpoint"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "iam:PassRole"
+      Resource: "*"
+      Condition:
+        StringEquals:
+          iam:PassedToService: "sagemaker.amazonaws.com"
+  resourcePolicy:
+    - Effect: Allow
+      Principal:
+        AWS: 
+        - ${file(./config.${self:provider.stage}.yml):snf_ef_role_principal}
+      Action: execute-api:Invoke
+      Resource:
+        - execute-api:/*/*/*
+
+  environment:
+    region: ${self:provider.region}
+    stage: ${self:provider.stage}
+    training_image_ecr_path: ${file(./config.${self:provider.stage}.yml):training_image_ecr_path}
+    sagemaker_role_arn: ${file(./config.${self:provider.stage}.yml):sagemaker_role_arn}
+
+functions:
+  train_and_generate_recommendations:
+    handler: handler.train_and_generate_recommendations
+    events:
+      - http:
+          path: train
+          method: post
+          authorizer: aws_iam
+
+  deploy_model:
+    handler: handler.deploy_model
+    events:
+      - http:
+          path: deploy
+          method: post
+          authorizer: aws_iam
+
+  invoke_model:
+    handler: handler.invoke_model
+    events:
+      - http:
+          path: invoke
+          method: post
+          authorizer: aws_iam
+
+resources:
+  Resources:
+    S3Bucket:
+      Type: AWS::S3::Bucket 
+      Properties:
+        AccessControl: Private
+        BucketName: sagemaker-recommender-demo-${self:provider.stage}

@@ -1,0 +1,5 @@
+region: us-east-1
+sagemaker_role_arn: <sagemaker_role_arn>
+training_image_ecr_path: <training_image_ecr_path>
+snf_ef_role_arn: <snf_ef_role_arn>
+snf_ef_role_principal: <snf_ef_role_principal>

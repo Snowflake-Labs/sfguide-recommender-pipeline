@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import os
+import json
+import pickle
+import sys
+import traceback
+import boto3
+import pandas as pd
+import snowflake.connector
+
+from collections import defaultdict
+
+from surprise import SVD
+from surprise.model_selection import cross_validate
+from surprise import Dataset
+from surprise import Reader
+from surprise import dump
+
+### SNOWFLAKE CONFIGURATION ###
+SF_ACCOUNT = '<your_snowflake_account>'
+SF_WH = '<your_snowflake_warehouse_name>'
+SF_USER = '<your_snowflake_username>'
+###############################
+
+# These are the paths to where SageMaker mounts interesting things in your container.
+prefix = '/opt/ml/'
+
+input_path = prefix + 'input/data'
+output_path = os.path.join(prefix, 'output')
+model_path = os.path.join(prefix, 'model')
+param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
+
+channel_name='training'
+training_path = os.path.join(input_path, channel_name)
+
+def get_top_n(predictions, n=10):
+    '''Return the top-N recommendation for each user from a set of predictions.
+
+    Args:
+        predictions(list of Prediction objects): The list of predictions, as
+            returned by the test method of an algorithm.
+        n(int): The number of recommendation to output for each user. Default
+            is 10.
+
+    Returns:
+    A dict where keys are user (raw) ids and values are lists of tuples:
+        [(raw item id, rating estimation), ...] of size n.
+    '''
+
+    # First map the predictions to each user.
+    top_n = defaultdict(list)
+    for uid, iid, true_r, est, _ in predictions:
+        top_n[uid].append((iid, est))
+
+    # Then sort the predictions for each user and retrieve the k highest ones.
+    for uid, user_ratings in top_n.items():
+        user_ratings.sort(key=lambda x: x[1], reverse=True)
+        top_n[uid] = user_ratings[:n]
+
+    return top_n
+
+def save_predictions_to_snowflake(top_n, cur, output_table_name):
+    values = ""
+    for uid, user_ratings in top_n.items():
+        if values:
+            values = values + ","
+        values = values + "(" + str(int(uid)) + ", '" + str([int(iid) for (iid, _) in user_ratings]) + "')"
+    
+    insert_statement = "INSERT INTO " + output_table_name + " select column1, parse_json(column2) from values "
+    sql = insert_statement + values
+    #print(insert_statement + values)
+    print("Top 10 predictions for all users saved to Snowflake table named: ", output_table_name)
+    cur.execute(sql)
+
+# The function to execute the training.
+def train():
+    print('Starting the training.')
+
+    try:
+         # Read in any hyperparameters that the user passed with the training job
+        with open(param_path, 'r') as tc:
+            trainingParams = json.load(tc)
+
+        input_table_name = trainingParams.get('input_table_name', None)
+        output_table_name = trainingParams.get('output_table_name', None)
+        aws_region = trainingParams.get('region', 'us-east-1')
+
+        # get the Snowflake password from AWS SSM parameter store
+        ssm = boto3.client('ssm', region_name=aws_region)
+        parameter = ssm.get_parameter(Name='snf_password', WithDecryption=True)
+        pwd = parameter['Parameter']['Value'] 
+
+        # Connecting to Snowflake using the default authenticator
+        ctx = snowflake.connector.connect(
+                user=SF_USER,
+                password=pwd,
+                account=SF_ACCOUNT,
+                role='sysadmin',
+                warehouse=SF_WH,
+                database='MOVIELENS',
+                schema='public'
+        )
+
+        # get the training data from Snowflake
+        cur=ctx.cursor()
+
+        # get ratings data from Snowflake
+        sql =  "select * from " + input_table_name
+        cur.execute(sql)
+        df = cur.fetch_pandas_all()
+
+        # A reader is still needed but only the rating_scale param is requiered.
+        reader = Reader(rating_scale=(1, 5))
+
+        # The columns must correspond to user id, item id and ratings (in that order).
+        data = Dataset.load_from_df(df[['USERID', 'MOVIEID', 'RATING']], reader)   
+
+        # We'll use the famous SVD algorithm.
+        algo = SVD()
+
+        # Run 5-fold cross-validation and print results
+        cross_validate(algo, data, measures=['RMSE', 'MAE'], cv=5, verbose=True)
+
+        trainset = data.build_full_trainset()
+
+        # Than predict ratings for all pairs (u, i) that are NOT in the training set.
+        testset = trainset.build_anti_testset()
+        predictions = algo.test(testset)
+
+        top_n = get_top_n(predictions, n=10)
+
+        # save the top 10 recommended ratings for each user back into Snowflake
+        save_predictions_to_snowflake(top_n, cur, output_table_name)
+
+        # save the model
+        dump.dump(os.path.join(model_path, 'model.pkl'), algo=algo)
+        print('Training complete.')
+        
+    except Exception as e:
+        # Write out an error file. This will be returned as the failureReason in the
+        # DescribeTrainingJob result.
+        trc = traceback.format_exc()
+        with open(os.path.join(output_path, 'failure'), 'w') as s:
+            s.write('Exception during training: ' + str(e) + '\n' + trc)
+        # Printing this causes the exception to be in the training job logs, as well.
+        print('Exception during training: ' + str(e) + '\n' + trc, file=sys.stderr)
+        # A non-zero exit code causes the training job to be marked as Failed.
+        sys.exit(255)
+
+if __name__ == '__main__':
+    train()
+
+    # A zero exit code causes the job to be marked a Succeeded.
+    sys.exit(0)

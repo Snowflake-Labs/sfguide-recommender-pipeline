@@ -1,0 +1,5 @@
+{
+    "input_table_name": "ratings_train_data_local_test",
+    "output_table_name": "user_movie_recommendations_local_test",
+    "region": "us-east-1"
+}
