@@ -1,4 +1,6 @@
-# Hands-on Lab: Machine Learning Model Training and Inference Using Snowflake External Functions and Amazon SageMaker
+# Snowflake Guide: Machine Learning Model Training and Inference Using Snowflake External Functions and Amazon SageMaker
+
+## ➡️ Complete this end-to-end tutorial on [guides.snowflake.com](https://guides.snowflake.com/guide/recommendation_engine_aws_sagemaker)
 
 End-to-end lab showing how to train a recommendation system using Amazon SageMaker with data stored in Snowflake. External Functions in Snowflake let us call external API endpoints which can bring extensibility to your data pipelines. Using External Functions, this solution automates the training/re-training of the recommendation model as well as automated bulk inference and deployment of a real-time inference endpoint. Here is the architecture diagram:
 
