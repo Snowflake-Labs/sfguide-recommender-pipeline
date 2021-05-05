@@ -36,7 +36,7 @@ def train_and_generate_recommendations(event, context):
         # start the SageMaker training job
         client = boto3.client('sagemaker')
 
-        bucket = os.environ['s3_bucket']
+        bucket = os.environ['s3_bucket'] 
         prefix = "training-job-" + time.strftime("%Y%m%d%H%M%S")
 
         s3_output_location = 's3://{}/'.format(bucket)

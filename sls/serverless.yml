@@ -35,7 +35,7 @@ provider:
   environment:
     region: ${self:provider.region}
     stage: ${self:provider.stage}
-    s3_bucket: sagemaker-${self:service}
+    s3_bucket: sagemaker-${self:service} 
     training_image_ecr_path: ${file(./config.${self:provider.stage}.yml):training_image_ecr_path}
     sagemaker_role_arn: ${file(./config.${self:provider.stage}.yml):sagemaker_role_arn}
 

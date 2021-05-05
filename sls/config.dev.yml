@@ -1,4 +1,4 @@
-unique_id: <YOUR_USERNAME>
+unique_id: <YOUR_USERNAME> 
 region: us-east-1
 sagemaker_role_arn: <sagemaker_role_arn>
 training_image_ecr_path: <training_image_ecr_path>
