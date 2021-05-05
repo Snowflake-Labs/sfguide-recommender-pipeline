@@ -40,7 +40,9 @@ Now we need to create a role in your AWS account that Snowflake can assume and i
 
 6. Go back to the `config.dev.yml` file and fill the value for the `snf_ef_role_arn` variable with `Role ARN` you captured in the last step.
 
-7. Fill out the `snf_ef_role_principal` with a value using this format:
+7. In `config.dev.yml`,  change the value for `unique_id` to your unique username. This is required to make sure the S3 bucket name is unique for your deployment.
+
+8. Fill out the `snf_ef_role_principal` with a value using this format:
 
     `arn:aws:sts::<12-digit-number>:assumed-role/<external_function_role>/snowflake` 
 

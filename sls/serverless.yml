@@ -1,4 +1,4 @@
-service: snf-recommender-demo
+service: snf-demo-${file(./config.${self:provider.stage}.yml):unique_id}
 
 frameworkVersion: ">=1.2.0 <2.0.0"
 
@@ -35,6 +35,7 @@ provider:
   environment:
     region: ${self:provider.region}
     stage: ${self:provider.stage}
+    s3_bucket: sagemaker-${self:service}
     training_image_ecr_path: ${file(./config.${self:provider.stage}.yml):training_image_ecr_path}
     sagemaker_role_arn: ${file(./config.${self:provider.stage}.yml):sagemaker_role_arn}
 
@@ -69,4 +70,4 @@ resources:
       Type: AWS::S3::Bucket 
       Properties:
         AccessControl: Private
-        BucketName: sagemaker-recommender-demo-${self:provider.stage}
+        BucketName: sagemaker-${self:service}
