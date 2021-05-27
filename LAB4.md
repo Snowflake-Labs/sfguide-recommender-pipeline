@@ -54,9 +54,17 @@ Now that our Snowflake External Functions are deployed and the right persmission
 
     `show external functions;`
 
-3. Trigger SageMaker training and bulk predictions and get top 10 ratings for each user in our target table. 
+3. Create a table `ratings_train_data` with sample rows and an empty table `user_movie_recommendations` that will store the scored results. Then we will  trigger SageMaker training and bulk predictions and get top 10 ratings for each user in our target table. 
 
     ```sql
+    create or replace table ratings_train_data as 
+    (select USERID, MOVIEID, RATING 
+    from ratings limit 10000);
+
+    create or replace table user_movie_recommendations 
+    (USERID float, 
+    TOP_10_RECOMMENDATIONS variant);
+
     select train_and_get_recommendations('MOVIELENS.PUBLIC.ratings_train_data','MOVIELENS.PUBLIC.user_movie_recommendations');
     ```
 
@@ -96,6 +104,7 @@ Now that our Snowflake External Functions are deployed and the right persmission
     ```sql
     -- create a table to hold pairs of users and movies where we DO NOT have a rating
     create or replace table no_ratings (USERID float, MOVIEID float); 
+    
     insert into no_ratings (USERID, MOVIEID) values
         ('1', '610'),
         ('10', '313'),
