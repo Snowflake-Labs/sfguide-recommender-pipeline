@@ -12,15 +12,19 @@ In this lab we will provision an Amazon API Gateway and the AWS Lambda functions
 
 2. Choose Create role. For role type, choose AWS Service, find and choose SageMaker, and then choose the SageMaker - Execution use case. Then choose Next: Permissions.
 
-3. On the Attach permissions policy page, choose these managed policies:  `AmazonSageMakerFullAccess` and `AmazonSSMReadOnlyAccess`.
+3. On the Attach permissions policy page, choose these managed policies:  `AmazonSageMakerFullAccess` .
 
-4. Choose Next: Review and create the role. After creation, find the newly created role and copy the `Role ARN` value.
+4. Choose Next: Review and create the role. After creation, click back on the role you just created and click on the permissions tab
 
-5. In the IDE, open the `config.dev.yml` file within the `sls` folder and paste in the `Role ARN` value you copied in the last step for `sagemaker_role_arn` variable.
+5. Click on Attach Policies, search for  `SSM` and pick the `AmazonSSMReadOnlyAccess` policy by checking the checkbox next to it and click on "Attach Policy"
 
-6. Paste in the value you noted down in the last step of LAB 2 for the `training_image_ecr_path` (this is the Docker image you pushed up to ECR).
+6. Copy the `Role ARN` value.
 
-7. Change the `region` if you are deploying to a different region. Save the `config.dev.yml` file.
+7. In the IDE, open the `config.dev.yml` file within the `sls` folder and paste in the `Role ARN` value you copied in the last step for `sagemaker_role_arn` variable.
+
+8. Paste in the value you noted down in the last step of LAB 2 for the `training_image_ecr_path` (this is the Docker image you pushed up to ECR).
+
+9. Change the `region` if you are deploying to a different region. Save the `config.dev.yml` file.
 
 #### IAM Role for Snowflake External Functions
 
@@ -72,7 +76,7 @@ Now that we have our Serverless infrastructure deployed, lets move over to the S
 
     Also select the DB and schema for which you want to create this External Functions (I'm using TEST.PUBLIC):
 
-    `use schema TEST.PULIC`
+    `use schema MOVIELENS.PUBLIC;`
 
 2. Let's create the API integration object within Snowflake that will point to external API Gateway resource:
 

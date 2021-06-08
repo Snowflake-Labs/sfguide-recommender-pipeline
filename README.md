@@ -37,6 +37,8 @@ You will need the following development tools on your machine to complete this l
     use role sysadmin;
     create database MOVIELENS;
     use schema movielens.public;
+    
+    CREATE OR REPLACE WAREHOUSE COMPUTE_WH WITH WAREHOUSE_SIZE = 'XSMALL' AUTO_SUSPEND = 60 AUTO_RESUME = TRUE;
 
     create table movies  (
         movieid int,
@@ -71,6 +73,7 @@ You will need the following development tools on your machine to complete this l
 8. Let's look at the data by running a quick select statement and also create a couple of small testing tables for when we test our SageMaker algorithm on our local machine:
 
     ```sql
+    use warehouse COMPUTE_WH;
     select * from ratings limit 10;
 
     -- INPUT TABLE: small dataset for local testing 
