@@ -28,7 +28,7 @@ We will create three External Functions: first one for training and bulk predict
     ```
 
     ```sql
-    create or replace external function invoke_model(user_id varchar, item_id varchar)
+    create or replace external function invoke_model(model_name varchar, user_id varchar, item_id varchar)
     returns variant
     api_integration = snf_recommender_api_integration
     as '<INVOKE_ENDPOINT_URL>';
@@ -39,7 +39,7 @@ We will create three External Functions: first one for training and bulk predict
     ```sql
     grant usage on function train_and_get_recommendations(varchar, varchar) to role sysadmin;
     grant usage on function deploy_model(varchar, varchar) to role sysadmin;
-    grant usage on function invoke_model(varchar, varchar) to role sysadmin;
+    grant usage on function invoke_model(varchar, varchar, varchar) to role sysadmin;
     ```
 
 #### Testing it out
@@ -54,16 +54,10 @@ Now that our Snowflake External Functions are deployed and the right persmission
 
     `show external functions;`
 
-3. Create a table `ratings_train_data` with sample rows and an empty table `user_movie_recommendations` that will store the scored results. Then we will  trigger SageMaker training and bulk predictions and get top 10 ratings for each user in our target table. 
+3. Trigger SageMaker training and bulk predictions and get top 10 ratings for each user in our target table. 
 
     ```sql
-    create or replace table ratings_train_data as 
-    (select USERID, MOVIEID, RATING 
-    from ratings limit 10000);
-
-    create or replace table user_movie_recommendations 
-    (USERID float, 
-    TOP_10_RECOMMENDATIONS variant);
+    create or replace table MOVIELENS.PUBLIC.user_movie_recommendations like MOVIELENS.PUBLIC.user_movie_recommendations_local_test;
 
     select train_and_get_recommendations('MOVIELENS.PUBLIC.ratings_train_data','MOVIELENS.PUBLIC.user_movie_recommendations');
     ```
@@ -104,7 +98,6 @@ Now that our Snowflake External Functions are deployed and the right persmission
     ```sql
     -- create a table to hold pairs of users and movies where we DO NOT have a rating
     create or replace table no_ratings (USERID float, MOVIEID float); 
-    
     insert into no_ratings (USERID, MOVIEID) values
         ('1', '610'),
         ('10', '313'),
@@ -119,7 +112,7 @@ Now that our Snowflake External Functions are deployed and the right persmission
 
     ```sql
     --real-time prediction for an individual movie for a particular user
-    select nr.USERID, nr.MOVIEID, m.title, invoke_model(nr.USERID,nr.MOVIEID) as rating_prediction 
+    select nr.USERID, nr.MOVIEID, m.title, invoke_model('movielens-model-v1', nr.USERID, nr.MOVIEID) as rating_prediction 
     from no_ratings nr, movies m
     where nr.movieid = m.movieid;
     ```

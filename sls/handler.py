@@ -205,13 +205,14 @@ def invoke_model(event, context):
         # For each input row in the JSON object...
         body = ""
         for row in rows:
+            model_name = row[1]
             # extract and transform the user_ids and item_ids posted to csv
-            body = body + row[1] + "," + row[2] + "\n"
+            body = body + row[2] + "," + row[3] + "\n"
         
         # invoke the SageMaker endpoint
         client = boto3.client('sagemaker-runtime')
         response = client.invoke_endpoint(
-            EndpointName='movielens-model-v1',
+            EndpointName=model_name,
             Body=body.encode('utf-8'),
             ContentType='text/csv'
         )
